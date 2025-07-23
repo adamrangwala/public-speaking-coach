@@ -25,6 +25,11 @@ def hello():
 def health():
     return {"status": "healthy", "version": "v4", "env_loaded": DATABASE_URL is not None}
 
+# Add template route
+@app.get("/page-test")
+def landing_page(request: Request):
+    return templates.TemplateResponse("landing.html", {"request": request})
+
 # SIMPLE startup - no complex initialization
 if __name__ == "__main__":
     import uvicorn

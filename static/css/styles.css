@@ -1,0 +1,36 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    line-height: 1.6;
+}
+
+nav {
+    background: #f0f0f0;
+    padding: 10px;
+    margin-bottom: 20px;
+}
+
+nav a {
+    text-decoration: none;
+    margin-right: 15px;
+    color: #333;
+    font-weight: bold;
+}
+
+nav a:hover {
+    color: #007bff;
+}
+
+h1 {
+    color: #007bff;
+    margin-bottom: 20px;
+}
+
+a {
+    color: #007bff;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
