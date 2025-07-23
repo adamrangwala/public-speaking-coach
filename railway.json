@@ -1,11 +1,11 @@
-https://public-speaking-coach-production-deab.up.railway.app/health{
+{
   "build": {
-    "builder": "NIXPACKS",
+    "builder": "nixpacks",
     "config": {}
   },
   "deploy": {
     "startCommand": "uvicorn app.main:app --host 0.0.0.0 --port 8080",
-    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyType": "on_failure",
     "restartPolicyMaxRetries": 10
   }
 }
