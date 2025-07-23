@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>{{ video['filename'] }}</h1>
+
+<video width="100%" controls>
+    <source src="/static/uploads/{{ video['filename'] }}" type="video/mp4">
+    Your browser does not support the video tag.
+</video>
+
+<div class="video-meta">
+    <p>Uploaded: {{ video['upload_date'][:10] }}</p>
+    <p>Size: {{ (video['filesize'] / 1024 / 1024) | round(2) }} MB</p>
+</div>
+
+<a href="/notes/{{ video['id'] }}" class="btn">View Notes</a>
+<a href="/videos" class="btn">Back to Videos</a>
+{% endblock %}

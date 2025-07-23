@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Your Speaking Videos</h1>
+
+{% if videos %}
+<table class="video-table">
+    <thead>
+        <tr>
+            <th>Filename</th>
+            <th>Size</th>
+            <th>Upload Date</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for video in videos %}
+        <tr>
+            <td>{{ video['filename'] }}</td>
+            <td>{{ (video['filesize'] / 1024 / 1024) | round(2) }} MB</td>
+            <td>{{ video['upload_date'][:10] }}</td>
+            <td>
+                <a href="/video/{{ video['id'] }}" class="btn">View</a>
+                <a href="/notes/{{ video['id'] }}" class="btn">Notes</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No videos uploaded yet.</p>
+{% endif %}
+
+<a href="/upload" class="btn">Upload New Video</a>
+{% endblock %}

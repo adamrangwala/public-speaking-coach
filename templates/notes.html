@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Notes for {{ video['filename'] }}</h1>
+
+<form action="/notes/{{ video['id'] }}" method="post">
+    <div class="form-group">
+        <textarea name="notes" class="notes-textarea">{{ video['notes'] }}</textarea>
+    </div>
+    <button type="submit" class="btn">Save Notes</button>
+</form>
+
+<a href="/videos" class="btn">Back to Videos</a>
+{% endblock %}

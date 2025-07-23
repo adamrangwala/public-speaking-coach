@@ -1,34 +1,91 @@
 import os
-from fastapi import FastAPI, Request, UploadFile, File
+from datetime import datetime
+from pathlib import Path
+from fastapi import FastAPI, Request, UploadFile, File, HTTPException, Form
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from decouple import config
-from pathlib import Path
+import sqlite3
 
-# SIMPLE app initialization - no complex config classes
+# App initialization
 app = FastAPI(title="Public Speaking Coach v4")
-
-# MOUNT STATIC FILES FIRST (fix v3 mounting order issue)
 app.mount("/static", StaticFiles(directory="static"), name="static")
-
-# SIMPLE template setup
 templates = Jinja2Templates(directory="templates")
 
-# SIMPLE environment loading - no Pydantic BaseSettings
+# Configuration
 DEBUG = config("DEBUG", default=True, cast=bool)
 DATABASE_URL = config("DATABASE_URL", default="sqlite:///./app.db")
-
-# Create uploads directory if it doesn't exist
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
 
+# Database setup
+def init_db():
+    conn = sqlite3.connect("app.db")
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS videos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            filename TEXT NOT NULL,
+            filepath TEXT NOT NULL,
+            filesize INTEGER NOT NULL,
+            upload_date TEXT NOT NULL,
+            notes TEXT DEFAULT ''
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+init_db()
+
+# Helper functions
+def save_video_metadata(filename, filepath, filesize):
+    conn = sqlite3.connect("app.db")
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO videos (filename, filepath, filesize, upload_date) VALUES (?, ?, ?, ?)",
+        (filename, str(filepath), filesize, datetime.now().isoformat())
+    )
+    conn.commit()
+    video_id = cursor.lastrowid
+    conn.close()
+    return video_id
+
+def get_all_videos():
+    conn = sqlite3.connect("app.db")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM videos ORDER BY upload_date DESC")
+    videos = cursor.fetchall()
+    conn.close()
+    return videos
+
+def get_video(video_id: int):
+    conn = sqlite3.connect("app.db")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM videos WHERE id = ?", (video_id,))
+    video = cursor.fetchone()
+    conn.close()
+    return video
+
+def update_video_notes(video_id: int, notes: str):
+    conn = sqlite3.connect("app.db")
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE videos SET notes = ? WHERE id = ?",
+        (notes, video_id)
+    )
+    conn.commit()
+    conn.close()
+
+# Routes
 @app.get("/")
 def hello():
     return {"message": "Hello World - V4 Working!", "debug": DEBUG}
 
-@app.get("/health")  
+@app.get("/health")
 def health():
-    return {"status": "healthy", "version": "v4", "env_loaded": DATABASE_URL is not None}
+    return {"status": "healthy", "version": "v4", "db_connected": True}
 
 @app.get("/page-test")
 def landing_page(request: Request):
@@ -45,18 +102,61 @@ async def upload_file(file: UploadFile = File(...)):
         allowed_types = ['.mp4', '.mov', '.avi', '.webm']
         file_ext = Path(file.filename).suffix.lower()
         if file_ext not in allowed_types:
-            return {"error": "Invalid file type"}
+            raise HTTPException(400, "Invalid file type")
 
-        # Save file to uploads directory
+        # Save file
         file_path = UPLOAD_DIR / file.filename
+        file_size = 0
         with open(file_path, "wb") as buffer:
-            buffer.write(await file.read())
+            content = await file.read()
+            file_size = len(content)
+            buffer.write(content)
 
-        return {"filename": file.filename, "status": "uploaded"}
+        # Save metadata
+        video_id = save_video_metadata(file.filename, file_path, file_size)
+
+        return {
+            "id": video_id,
+            "filename": file.filename,
+            "size": file_size,
+            "status": "uploaded"
+        }
     except Exception as e:
-        return {"error": str(e)}
+        raise HTTPException(500, str(e))
 
-# SIMPLE startup - no complex initialization
+@app.get("/videos")
+def list_videos(request: Request):
+    videos = get_all_videos()
+    return templates.TemplateResponse("videos.html", {
+        "request": request,
+        "videos": videos
+    })
+
+@app.get("/video/{video_id}")
+def view_video(request: Request, video_id: int):
+    video = get_video(video_id)
+    if not video:
+        raise HTTPException(404, "Video not found")
+    return templates.TemplateResponse("video_view.html", {
+        "request": request,
+        "video": video
+    })
+
+@app.get("/notes/{video_id}")
+def view_notes(request: Request, video_id: int):
+    video = get_video(video_id)
+    if not video:
+        raise HTTPException(404, "Video not found")
+    return templates.TemplateResponse("notes.html", {
+        "request": request,
+        "video": video
+    })
+
+@app.post("/notes/{video_id}")
+def save_notes(video_id: int, notes: str = Form(...)):
+    update_video_notes(video_id, notes)
+    return {"status": "updated", "video_id": video_id}
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))
