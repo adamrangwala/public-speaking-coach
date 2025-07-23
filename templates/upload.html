@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Upload Your Speaking Video</h1>
+<form action="/upload" method="post" enctype="multipart/form-data">
+    <div class="form-group">
+        <label for="video">Select video file (MP4, MOV, AVI, WEBM - max 50MB):</label>
+        <input type="file" id="video" name="file" accept=".mp4,.mov,.avi,.webm" required>
+    </div>
+    <button type="submit" class="btn">Upload Video</button>
+</form>
+{% endblock %}
