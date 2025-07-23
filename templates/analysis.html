@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Analysis for {{ video['filename'] }}</h1>
+
+<div class="video-container">
+    <video width="100%" controls>
+        <source src="/uploads/{{ video['filename'] }}" type="video/mp4">
+        Your browser does not support the video tag.
+    </video>
+</div>
+
+<div class="analysis-results">
+    <h2>Analysis Results</h2>
+    <div class="metrics">
+        <div class="metric">
+            <h3>Speech Clarity</h3>
+            <div class="score">85%</div>
+        </div>
+        <div class="metric">
+            <h3>Pace</h3>
+            <div class="score">120 WPM</div>
+        </div>
+        <div class="metric">
+            <h3>Filler Words</h3>
+            <div class="score">12</div>
+        </div>
+    </div>
+
+    <div class="notes-section">
+        <h3>Detailed Feedback</h3>
+        <p>Your speech was clear and well-paced overall. Try to reduce filler words like "um" and "ah".</p>
+    </div>
+</div>
+
+<a href="/video/{{ video['id'] }}" class="btn">Back to Video</a>
+{% endblock %}

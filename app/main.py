@@ -6,10 +6,13 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from decouple import config
 import sqlite3
+import subprocess
+import json
 
 # App initialization
 app = FastAPI(title="Public Speaking Coach v4")
 app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 templates = Jinja2Templates(directory="templates")
 
 # Configuration
@@ -29,7 +32,8 @@ def init_db():
             filepath TEXT NOT NULL,
             filesize INTEGER NOT NULL,
             upload_date TEXT NOT NULL,
-            notes TEXT DEFAULT ''
+            notes TEXT DEFAULT '',
+            analysis_data TEXT DEFAULT '{}'
         )
     """)
     conn.commit()
@@ -77,6 +81,33 @@ def update_video_notes(video_id: int, notes: str):
     )
     conn.commit()
     conn.close()
+
+def update_analysis_data(video_id: int, analysis_data: str):
+    conn = sqlite3.connect("app.db")
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE videos SET analysis_data = ? WHERE id = ?",
+        (analysis_data, video_id)
+    )
+    conn.commit()
+    conn.close()
+
+def analyze_speech(video_path: str):
+    """Basic speech analysis function (placeholder implementation)"""
+    try:
+        # In a real implementation, this would use a speech processing library
+        # For now, return mock analysis data
+        return {
+            "clarity_score": 85,
+            "words_per_minute": 120,
+            "filler_words": 12,
+            "feedback": "Your speech was clear overall. Try to reduce filler words."
+        }
+    except Exception as e:
+        return {
+            "error": str(e),
+            "feedback": "Analysis failed. Please try again."
+        }
 
 # Routes
 @app.get("/")
@@ -141,6 +172,33 @@ def view_video(request: Request, video_id: int):
         "request": request,
         "video": video
     })
+
+@app.get("/analysis/{video_id}")
+def view_analysis(request: Request, video_id: int):
+    try:
+        video = get_video(video_id)
+        if not video:
+            raise HTTPException(404, "Video not found")
+        
+        # Safely get analysis data
+        analysis_data = {}
+        if 'analysis_data' in video.keys():
+            try:
+                analysis_data = json.loads(video['analysis_data'] or '{}')
+            except json.JSONDecodeError:
+                analysis_data = {}
+        
+        if not analysis_data:
+            analysis_data = analyze_speech(video['filepath'])
+            update_analysis_data(video_id, json.dumps(analysis_data))
+        
+        return templates.TemplateResponse("analysis.html", {
+            "request": request,
+            "video": video,
+            "analysis": analysis_data
+        })
+    except Exception as e:
+        raise HTTPException(500, f"Analysis failed: {str(e)}")
 
 @app.get("/notes/{video_id}")
 def view_notes(request: Request, video_id: int):
